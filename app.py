@@ -1,11 +1,15 @@
 import json
 import math
 import os
+import re
+import smtplib
 from datetime import datetime
+from email.message import EmailMessage
 
 from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 
 from linkedlist import LinkedList
+from stack import Stack          # linked-list stack made of Nodes (stack.py)
 
 app = Flask(__name__)
 app.secret_key = "change-this-secret-key"
@@ -18,6 +22,7 @@ PROFILE = {
     "name": "Anika Sophia C. Basa",
     "first_name": "Anika",
     "initials": "AB",
+    "intro": "I love solving problems, building things, and making music.",
     "tagline": "Computer Engineering student who loves solving problems, building things, and making music",
     "roles": ["Computer Engineering Student", "Python Developer", "Problem Solver", "Musician & Gamer"],
     "about": (
@@ -26,6 +31,11 @@ PROFILE = {
         "a web page, or a data structure. Outside of code, I'm usually singing, dancing, playing an "
         "instrument, or gaming. I believe creativity and logic work best together."
     ),
+    # --- player card (home page) ---
+    "level": 2,
+    "player_class": "Computer Engineer in training",
+    "main_quest": "Finish Data Structures & Algorithms",
+    "side_quest": "Learn a new song on guitar",
     "section": "BSCPE 2-3",
     "course": "Bachelor of Science in Computer Engineering",
     "year": "2nd Year",
@@ -38,13 +48,13 @@ PROFILE = {
         ("The best way to predict the future is to invent it.", "Alan Kay"),
     ],
     "skills": [
-        ("HTML & CSS", 80),
-        ("Python", 70),
-        ("C / C++", 60),
-        ("Git & GitHub", 50),
+        ("HTML & CSS", 90),
+        ("Python", 80),
+        ("C / C++", 70),
+        ("Git & GitHub", 70),
         ("Arduino & Microcontrollers", 60),
     ],
-    "interests": ["Gaming 🎮", "Music 🎵", "Singing 🎤", "Dancing 💃", "Playing Instruments 🎸"],
+    "interests": ["Gaming 🎮", "Music 🎵", "Singing 🎤", "Playing Instruments 🎸"],
     "timeline": [
         ("2026", "Learning Data Structures & Algorithms",
          "Building linked lists and more, and turning this Flask lab into my own personal portfolio."),
@@ -72,6 +82,8 @@ WORKS = [
      "url": "atriangle", "icon": "△", "tag": "Math"},
     {"title": "Linked List", "desc": "An interactive, animated singly linked list.",
      "url": "linkedlist_page", "icon": "⛓", "tag": "Data Structures"},
+    {"title": "Infix to Postfix", "desc": "Convert an expression to postfix using a stack made of linked-list nodes.",
+     "url": "infixtopostfix", "icon": "⇄", "tag": "Data Structures"},
 ]
 
 
@@ -92,6 +104,33 @@ def profile():
     return render_template("profile.html")
 
 
+
+# --------------------------- contact form → email ---------------------------
+# Every message is ALWAYS saved to messages.jsonl (a file next to app.py).
+# If you also want each message emailed to you, set these 3 environment variables
+# before running the app (see the readme):
+#     MAIL_USER  = your Gmail address
+#     MAIL_PASS  = a Gmail "App Password" (NOT your normal password)
+#     MAIL_TO    = where to send the messages (optional, defaults to MAIL_USER)
+def send_email(entry):
+    user, password = os.environ.get("MAIL_USER"), os.environ.get("MAIL_PASS")
+    if not user or not password:
+        return False                      # email not set up -> just keep the saved copy
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = "Portfolio message from " + entry["name"]
+        msg["From"] = user
+        msg["To"] = os.environ.get("MAIL_TO", user)
+        msg["Reply-To"] = entry["email"]  # so you can just hit "Reply"
+        msg.set_content(f"Name: {entry['name']}\nEmail: {entry['email']}\nTime: {entry['time']}\n\n{entry['message']}")
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
+            server.login(user, password)
+            server.send_message(msg)
+        return True
+    except Exception as err:              # wrong password, no internet, bad email, etc.
+        print("Email failed:", err)
+        return False
+
 @app.route("/contact", methods=["GET", "POST"])
 def contact():
     if request.method == "POST":
@@ -104,11 +143,19 @@ def contact():
         if entry["name"] and entry["email"] and entry["message"]:
             with open("messages.jsonl", "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry) + "\n")
-            flash("Thanks for reaching out! Your message has been saved.", "success")
+            if send_email(entry):
+                flash("Thanks for reaching out! Your message was sent to my email.", "success")
+            else:
+                flash("Thanks for reaching out! Your message has been saved.", "success")
         else:
             flash("Please fill in all the fields.", "error")
         return redirect(url_for("contact") + "#form")
     return render_template("contact.html")
+
+
+@app.errorhandler(404)
+def not_found(error):
+    return render_template("404.html"), 404
 
 
 # --------------------------- programming works ---------------------------
@@ -160,6 +207,177 @@ def atriangle():
             msg = str(e)
             error = msg if "must" in msg or "can't" in msg else "Please enter valid numbers in every field."
     return render_template("triangle.html", data=data, error=error, mode=mode, form=form)
+
+
+# --------------------------- infix → postfix (stack) ---------------------------
+# The stack is the linked-list Stack from stack.py (every item is a Node).
+PRECEDENCE = {"+": 1, "-": 1, "*": 2, "/": 2, "%": 2, "^": 3}
+TOKEN_RE = re.compile(r"\s*(\d+\.\d+|[A-Za-z0-9]+|\S)")
+OPERAND_RE = re.compile(r"\d+\.\d+|[A-Za-z0-9]+")
+NUMBER_RE = re.compile(r"\d+(\.\d+)?")
+
+
+def stack_to_list(stack):
+    """Walk the nodes from top to bottom and return their data as a list."""
+    items = []
+    current = stack.top
+    while current:
+        items.append(current.data)
+        current = current.next
+    return items
+
+
+def infix_to_postfix(expression):
+    """Return (postfix_string, steps). Raises ValueError if the expression is not valid."""
+    if len(expression) > 200:
+        raise ValueError("That expression is too long (200 characters max).")
+    tokens = TOKEN_RE.findall(expression)
+    if not tokens:
+        raise ValueError("Please type an infix expression first, like A+B*C.")
+
+    stack = Stack()
+    output = []
+    steps = []
+    expect_operand = True          # True when the next token must be a value or "("
+
+    def record(token, action):
+        steps.append({"token": token, "action": action,
+                      "stack": stack_to_list(stack), "output": " ".join(output)})
+
+    for tok in tokens:
+        if OPERAND_RE.fullmatch(tok):                      # operand (A, b, 12, 3.5, x1 ...)
+            if not expect_operand:
+                raise ValueError(f"Two values in a row near '{tok}'. Is an operator missing?")
+            output.append(tok)
+            expect_operand = False
+            record(tok, "Operand → goes straight to the output")
+
+        elif tok == "(":
+            if not expect_operand:
+                raise ValueError("An operator is missing before '('.")
+            stack.push(tok)
+            record(tok, "Push '(' onto the stack")
+
+        elif tok == ")":
+            if expect_operand:
+                raise ValueError("Something is missing before ')'.")
+            popped = []
+            while stack.peek() is not None and stack.peek() != "(":
+                item = stack.pop()
+                output.append(item)
+                popped.append(item)
+            if stack.peek() != "(":
+                raise ValueError("Mismatched parentheses: a ')' has no matching '('.")
+            stack.pop()                                    # throw away the "("
+            moved = ", ".join(popped) if popped else "nothing"
+            record(tok, f"Pop {moved} to the output until '(' , then remove '('")
+
+        elif tok in PRECEDENCE:
+            if expect_operand:
+                raise ValueError(f"The operator '{tok}' needs a value before it.")
+            popped = []
+            while True:
+                top = stack.peek()
+                if top is None or top == "(":
+                    break
+                same = PRECEDENCE[top] == PRECEDENCE[tok]
+                # pop higher precedence, or equal precedence (except ^ which goes right-to-left)
+                if PRECEDENCE[top] > PRECEDENCE[tok] or (same and tok != "^"):
+                    item = stack.pop()
+                    output.append(item)
+                    popped.append(item)
+                else:
+                    break
+            stack.push(tok)
+            expect_operand = True
+            action = f"Push '{tok}'"
+            if popped:
+                action = f"Pop {', '.join(popped)} to the output first, then push '{tok}'"
+            record(tok, action)
+
+        else:
+            raise ValueError(f"'{tok}' is not allowed. Use letters, numbers, + - * / % ^ and ( ).")
+
+    if expect_operand:
+        raise ValueError("The expression ends too early. A value is missing at the end.")
+
+    while stack.peek() is not None:                        # empty the stack at the end
+        item = stack.pop()
+        if item == "(":
+            raise ValueError("Mismatched parentheses: a '(' was never closed.")
+        output.append(item)
+        record("end", f"No more tokens → pop '{item}' to the output")
+
+    joiner = "" if all(len(x) == 1 for x in output) else " "
+    return joiner.join(output), steps, output
+
+
+def evaluate_postfix(tokens):
+    """Evaluate postfix tokens with the same linked-list Stack.
+    Returns (value, steps). Only works when every operand is a number."""
+    stack = Stack()
+    steps = []
+
+    def record(token, action):
+        steps.append({"token": token, "action": action, "stack": stack_to_list(stack)})
+
+    def show(n):
+        return f"{n:.10g}" if isinstance(n, float) else str(n)
+
+    for tok in tokens:
+        if NUMBER_RE.fullmatch(tok):
+            stack.push(float(tok) if "." in tok else int(tok))
+            record(tok, f"Number → push {tok}")
+        else:
+            b = stack.pop()                                # the top is the RIGHT side
+            a = stack.pop()
+            try:
+                if tok == "+":
+                    r = a + b
+                elif tok == "-":
+                    r = a - b
+                elif tok == "*":
+                    r = a * b
+                elif tok == "/":
+                    r = a / b
+                elif tok == "%":
+                    r = a % b
+                else:                                      # "^"
+                    if abs(b) > 1000:
+                        raise OverflowError
+                    r = a ** b
+                if isinstance(r, complex) or abs(r) > 1e300:
+                    raise OverflowError
+            except ZeroDivisionError:
+                raise ValueError("Can't divide by zero, so this expression has no value.")
+            except OverflowError:
+                raise ValueError("That calculation is too big (or not a real number), so there is no value.")
+            stack.push(r)
+            record(tok, f"Pop {show(b)} and {show(a)}, calculate {show(a)} {tok} {show(b)} = {show(r)}, push {show(r)}")
+    return stack.pop(), steps
+
+
+@app.route("/works/infixtopostfix", methods=["GET", "POST"])
+def infixtopostfix():
+    expression, postfix, steps, error = "", None, [], None
+    value, eval_steps, value_note = None, [], None
+    if request.method == "POST":
+        expression = request.form.get("infix", "").strip()
+        try:
+            postfix, steps, tokens = infix_to_postfix(expression)
+            if all(t in PRECEDENCE or NUMBER_RE.fullmatch(t) for t in tokens):   # only numbers + operators
+                try:
+                    value, eval_steps = evaluate_postfix(tokens)
+                except ValueError as e:
+                    value_note = str(e)
+            else:
+                value_note = "This expression has letters, so there is no number to calculate. Try numbers like 3+4*2."
+        except ValueError as e:
+            error = str(e)
+    if isinstance(value, float):
+        value = f"{value:.10g}"
+    return render_template("infixtopostfix.html", expression=expression, postfix=postfix, steps=steps,
+                           error=error, value=value, eval_steps=eval_steps, value_note=value_note)
 
 
 # ------------------------------ linked list ------------------------------

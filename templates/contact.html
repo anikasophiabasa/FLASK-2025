@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Contact{% endblock %}
 {% block content %}
-<div class="page-head reveal">
-    <span class="eyebrow">Get in touch</span>
-    <h1>Let's <span class="grad-text">connect</span></h1>
+<div class="page-head">
+    <span class="eyebrow">CONTACT</span>
+    <h1>Let's <span class="hl">connect</span></h1>
     <p>Have a question, an idea, or just want to say hi? My inbox is always open.</p>
 </div>
 
 <div class="contact-layout">
-    <div class="card reveal">
+    <div class="card">
         <a class="contact-item" href="mailto:{{ me.email }}"><span class="ci">✉️</span><div><small>Email</small><b>{{ me.email }}</b></div></a>
         <a class="contact-item" href="tel:{{ me.phone|replace(' ', '') }}"><span class="ci">📞</span><div><small>Phone</small><b>{{ me.phone }}</b></div></a>
         <div class="contact-item"><span class="ci">📍</span><div><small>Location</small><b>{{ me.location }}</b></div></div>
@@ -18,7 +18,7 @@
         </div>
     </div>
 
-    <div class="card reveal d2" id="form">
+    <div class="card" id="form">
         <h3 style="margin-bottom:20px;font-size:1.4rem">Send me a message</h3>
         <form method="post" action="{{ url_for('contact') }}">
             <div class="row-2">

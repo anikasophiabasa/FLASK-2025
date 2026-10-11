@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Linked List{% endblock %}
 {% block content %}
-<div class="page-head reveal"><span class="eyebrow">Programming works · Data structures</span>
-    <h1>Interactive <span class="grad-text">Linked List</span></h1>
+<div class="page-head"><span class="eyebrow">QUEST · Data structures</span>
+    <h1>Interactive <span class="hl">Linked List</span></h1>
     <p>A singly linked list running in Python on the server. Every button below calls a real method of the <code>LinkedList</code> class.</p></div>
 
 <a class="back" href="{{ url_for('index') }}#works">← All works</a>
 <div class="ll-layout">
-    <div class="card ll-controls reveal">
+    <div class="card ll-controls">
         <div class="field"><label for="llValue">Value</label><input type="text" id="llValue" placeholder="e.g. Hello" maxlength="30"></div>
         <div class="field"><label for="llIndex">Index (for “at index” actions)</label><input type="number" id="llIndex" min="0" placeholder="e.g. 1"></div>
 
@@ -32,7 +32,7 @@
         </div>
     </div>
 
-    <div class="card ll-stage reveal d2">
+    <div class="card ll-stage">
         <div class="ll-meta"><span>Size: <b id="llSize">0</b></span><span>Head → <b id="llHead">—</b></span><span>Tail → <b id="llTail">—</b></span></div>
         <div class="ll-track" id="llTrack"></div>
         <div class="ll-log" id="llLog">Ready.</div>

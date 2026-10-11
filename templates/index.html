@@ -3,52 +3,74 @@
 {% block content %}
 <section class="hero">
     <div>
-        <span class="pill reveal"><span class="dot"></span>Open to opportunities</span>
-        <h1 class="reveal d1">Hi, I'm <span class="grad-text">{{ me.name }}</span></h1>
-        <div class="typed reveal d2"><span id="typed" data-words='{{ me.roles|tojson }}'></span><span class="caret"></span></div>
-        <p class="lead reveal d3">{{ me.about }}</p>
-        <div class="hero-cta reveal d4">
-            <a class="btn" href="{{ url_for('profile') }}">View my profile →</a>
-            <a class="btn ghost" href="#works">Explore my works</a>
+        <p class="hello">Hi there, I'm</p>
+        <h1>{{ me.name }}</h1>
+        <p class="roles">{{ me.roles|join(' · ') }}</p>
+        <p class="lead">{{ me.intro }}</p>
+        <div class="hero-cta">
+            <a class="btn" href="#works">▶ Press Start</a>
+            <a class="btn ghost" href="{{ url_for('profile') }}">My profile</a>
             <a class="btn ghost" href="{{ url_for('contact') }}">Say hello</a>
         </div>
-        <div class="stats reveal d4">
-            <div><b data-count="{{ works_list|length }}">0</b><span>Programming works</span></div>
-            <div><b data-count="{{ me.skills|length }}">0</b><span>Core skills</span></div>
-            <div><b data-count="100" data-suffix="%">0</b><span>Passion</span></div>
+        <div class="hud">
+            <div><b>{{ works_list|length }}</b><span class="pixel">QUESTS</span></div>
+            <div><b>{{ me.skills|length }}</b><span class="pixel">SKILLS</span></div>
+            <div><b>{{ me.interests|length }}</b><span class="pixel">HOBBIES</span></div>
         </div>
     </div>
-    <div class="avatar-wrap reveal d2">
+
+    <div class="player-card">
+        <div class="pc-top"><span class="pixel">PLAYER 1</span><span class="pixel">LV {{ me.level }}</span></div>
         <div class="avatar">
             {% if has_photo %}<img src="{{ url_for('static', filename='images/profile.jpg') }}" alt="{{ me.name }}">
             {% else %}<span class="initials">{{ me.initials }}</span>{% endif %}
         </div>
-        <span class="float-chip c1">🐍 Python</span>
-        <span class="float-chip c2">🌶️ Flask</span>
-        <span class="float-chip c3">🎨 CSS</span>
+        <h3>{{ me.first_name }}</h3>
+        <p class="cls">{{ me.player_class }}</p>
+        <ul class="pc-list">
+            <li><small>MAIN QUEST</small>{{ me.main_quest }}</li>
+            <li><small>SIDE QUEST</small>{{ me.side_quest }}</li>
+            <li><small>FAVORITE ITEMS</small>🎮 🎵 🎤 🎸</li>
+        </ul>
     </div>
 </section>
 
 <section class="section" id="works">
-    <div class="reveal">
-        <span class="eyebrow">Programming works</span>
-        <h2 class="section-title">Things I've <span class="grad-text">built</span></h2>
-        <p class="section-sub">Small, interactive programs that show how I think. Pick one and give it a try.</p>
-    </div>
+    <span class="eyebrow">QUEST BOARD</span>
+    <h2 class="section-title">Things I've <span class="hl">built</span></h2>
+    <p class="section-sub">Small programs I made while learning. Pick a quest and give it a try!</p>
     <div class="works-grid">
         {% for w in works_list %}
-        <a href="{{ url_for(w.url) }}" class="card hover work-card reveal d{{ loop.index }}">
+        <a href="{{ url_for(w.url) }}" class="card hover work-card">
+            <span class="pixel quest">QUEST {{ loop.index }}</span>
             <div class="icon">{{ w.icon }}</div>
             <span class="tag">{{ w.tag }}</span>
             <h3>{{ w.title }}</h3>
             <p>{{ w.desc }}</p>
-            <span class="arrow">Open →</span>
+            <span class="arrow">Start →</span>
         </a>
         {% endfor %}
     </div>
 </section>
 
-<section class="section reveal">
-    <div class="motto"><small>My motto</small>{{ me.motto }}</div>
+<section class="section">
+    <div class="loot card">
+        <span class="eyebrow">LOOT BOX</span>
+        <h2 class="section-title">Open a <span class="hl">loot box</span></h2>
+        <p class="section-sub" style="margin-inline:auto">Tap the chest to find out something about me. What will you get?</p>
+        <button class="chest" id="chest" type="button" aria-label="Open loot box">🎁</button>
+        <div class="loot-result" id="lootResult">
+            <span class="pixel" id="lootRarity"></span>
+            <p id="lootText">Tap the chest!</p>
+            <small id="lootSub"></small>
+        </div>
+        <button class="btn sm" id="lootBtn" type="button">Open loot box</button>
+        <small class="loot-count" id="lootCount"></small>
+    </div>
+    <script type="application/json" id="lootData">{{ {'common': me.interests, 'rare': me.skills, 'epic': me.sayings}|tojson }}</script>
+</section>
+
+<section class="section">
+    <div class="motto"><small>MY MOTTO</small>{{ me.motto }}</div>
 </section>
 {% endblock %}

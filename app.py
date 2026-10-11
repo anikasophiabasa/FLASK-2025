@@ -22,7 +22,8 @@ PROFILE = {
     "name": "Anika Sophia C. Basa",
     "first_name": "Anika",
     "initials": "AB",
-    "intro": "I love solving problems, building things, and finding inspiration in music.",
+    "intro": "I love solving problems, building things, and making music.",
+    "tagline": "Computer Engineering student who loves solving problems, building things, and making music",
     "roles": ["Computer Engineering Student", "Python Developer", "Problem Solver", "Musician & Gamer"],
     "about": (
         "I'm a 2nd year Computer Engineering student at the Polytechnic University of the Philippines. "
